@@ -4,11 +4,11 @@ from pycuda.compiler import SourceModule
 
 import numpy as np
 
-import cuda_mt_rand
+import mt_rand
 
 mod = SourceModule(
     """
-    #include "cuda_mt_rand.cu.h"
+    #include "mt_rand.cu.h"
 __global__ void cu_rand_test(float *x, int N)
 {
   unsigned int idx = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
@@ -24,10 +24,10 @@ __global__ void cu_rand_test(float *x, int N)
 }
 
     """,
-    include_dirs=[cuda_mt_rand.get_include_dir()])
+    include_dirs=[mt_rand.get_include_dir()])
 
 # seed the random number generator
-cuda_mt_rand.seed(cuda,mod)
+mt_rand.seed(cuda,mod)
 
 cu_rand = mod.get_function("cu_rand_test")
 
