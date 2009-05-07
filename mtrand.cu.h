@@ -67,6 +67,14 @@ struct MersenneTwisterState {
 
 __device__ static mt_struct_stripped MT[MT_RNG_COUNT];
 
+__global__ void MersineTwisterSetSeed(unsigned int *seeds, int N)
+{
+  for (int i=0; i<N; i++)
+  {
+    MT[i].seed = seeds[i];
+  }
+}
+
 __device__ void MersenneTwisterInitialise(MersenneTwisterState &state, unsigned int threadID) {
 	state.mt[0] = MT[threadID].seed;
 	for(int i = 1; i < MT_NN; ++ i) {
