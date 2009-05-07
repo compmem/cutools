@@ -4,7 +4,7 @@ from pycuda.compiler import SourceModule
 
 import numpy as np
 
-import mt_rand
+from cuda_utils import mt_rand
 
 mod = SourceModule(
     """
