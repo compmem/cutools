@@ -42,10 +42,10 @@
 
 // Record format for MersenneTwister.dat, created by spawnTwisters.c
 struct mt_struct_stripped {
-	unsigned int matrix_a;
-	unsigned int mask_b;
-	unsigned int mask_c;
-	unsigned int seed;
+  unsigned int matrix_a;
+  unsigned int mask_b;
+  unsigned int mask_c;
+  unsigned int seed;
 };
 
 
@@ -60,9 +60,11 @@ struct mt_struct_stripped {
 #define MT_SHIFT1 18
 
 struct MersenneTwisterState {
-	unsigned int mt[MT_NN];
-	int iState;
-	unsigned int mti1;
+  unsigned int mt[MT_NN];
+  int iState;
+  unsigned int mti1;
+  unsigned int has_randn_val;
+  float randn_val;
 };
 
 __device__ static mt_struct_stripped MT[MT_RNG_COUNT];
@@ -76,38 +78,86 @@ __global__ void MersineTwisterSetSeed(unsigned int *seeds, int N)
 }
 
 __device__ void MersenneTwisterInitialise(MersenneTwisterState &state, unsigned int threadID) {
-	state.mt[0] = MT[threadID].seed;
-	for(int i = 1; i < MT_NN; ++ i) {
-		state.mt[i] = (1812433253U * (state.mt[i - 1] ^ (state.mt[i - 1] >> 30)) + i) & MT_WMASK;
-	}
+  state.mt[0] = MT[threadID].seed;
+  for(int i = 1; i < MT_NN; ++ i) {
+    state.mt[i] = (1812433253U * (state.mt[i - 1] ^ (state.mt[i - 1] >> 30)) + i) & MT_WMASK;
+  }
 
-	state.iState = 0;
-	state.mti1 = state.mt[0];
+  state.iState = 0;
+  state.mti1 = state.mt[0];
+	
+  // do not have randn to start
+  state.has_randn_val = 0;
 }
 
 __device__ unsigned int MersenneTwisterGenerate(MersenneTwisterState &state, unsigned int threadID) {
-	int iState1 = state.iState + 1;
-	int iStateM = state.iState + MT_MM;
+  int iState1 = state.iState + 1;
+  int iStateM = state.iState + MT_MM;
 
-	if(iState1 >= MT_NN) iState1 -= MT_NN;
-	if(iStateM >= MT_NN) iStateM -= MT_NN;
+  if(iState1 >= MT_NN) iState1 -= MT_NN;
+  if(iStateM >= MT_NN) iStateM -= MT_NN;
 
-	unsigned int mti = state.mti1;
-	state.mti1 = state.mt[iState1];
-	unsigned int mtiM = state.mt[iStateM];
+  unsigned int mti = state.mti1;
+  state.mti1 = state.mt[iState1];
+  unsigned int mtiM = state.mt[iStateM];
 
-	unsigned int x = (mti & MT_UMASK) | (state.mti1 & MT_LMASK);
-	x = mtiM ^ (x >> 1) ^ ((x & 1) ? MT[threadID].matrix_a : 0);
-	state.mt[state.iState] = x;
-	state.iState = iState1;
+  unsigned int x = (mti & MT_UMASK) | (state.mti1 & MT_LMASK);
+  x = mtiM ^ (x >> 1) ^ ((x & 1) ? MT[threadID].matrix_a : 0);
+  state.mt[state.iState] = x;
+  state.iState = iState1;
 
-	// Tempering transformation.
-	x ^= (x >> MT_SHIFT0);
-	x ^= (x << MT_SHIFTB) & MT[threadID].mask_b;
-	x ^= (x << MT_SHIFTC) & MT[threadID].mask_c;
-	x ^= (x >> MT_SHIFT1);
+  // Tempering transformation.
+  x ^= (x >> MT_SHIFT0);
+  x ^= (x << MT_SHIFTB) & MT[threadID].mask_b;
+  x ^= (x << MT_SHIFTC) & MT[threadID].mask_c;
+  x ^= (x >> MT_SHIFT1);
 
-	return x;
+  return x;
 }
+
+__device__ float mtrand(MersenneTwisterState &state, unsigned int threadID) 
+{
+  return (float)MersenneTwisterGenerate(state, threadID) / 4294967295.0f;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Transform each of MT_RNG_COUNT lanes of NPerRng uniformly distributed 
+// random samples, produced by RandomGPU(), to normally distributed lanes
+// using Cartesian form of Box-Muller transformation.
+// NPerRng must be even.
+////////////////////////////////////////////////////////////////////////////////
+#define PI 3.14159265358979f
+__device__ void BoxMuller(float& u1, float& u2){
+    float   r = sqrtf(-2.0f * logf(u1));
+    float phi = 2 * PI * u2;
+    u1 = r * __cosf(phi);
+    u2 = r * __sinf(phi);
+}
+
+__device__ float mtrandn(MersenneTwisterState &state, unsigned int threadID) 
+{
+  if (state.has_randn_val == 1)
+  {
+    // use it
+    state.has_randn_val = 0;
+    return state.randn_val;
+  }
+  else
+  {
+    // generate two and return one
+    float u1, u2;
+    u1 = mtrand(state, threadID);
+    u2 = mtrand(state, threadID);
+    BoxMuller(u1, u2);
+
+    // keep one for the state
+    state.has_randn_val = 1;
+    state.randn_val = u2;
+
+    // return the other one
+    return u1;
+  }
+}
+
 
 #endif
