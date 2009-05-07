@@ -11,7 +11,7 @@ UINT32_MAX = 4294967295
 def get_include_dir():
     return os.path.dirname(os.path.abspath(__file__))
 
-def seed(cuda, mod):
+def seed(cuda, mod, seeds=None):
     """
     Set the seeds for the Mersenne Twisters.
     """
@@ -30,10 +30,17 @@ def seed(cuda, mod):
     cuda.memcpy_htod(cuMT[0],mtinit)
 
     # set the seed to random starting values
-    seeds = np.asarray(np.random.randint(0, high=UINT32_MAX+1, size=nseeds), dtype=np.uint32)
+    if seeds is None:
+        # generate them
+        seeds = np.asarray(np.random.randint(0, high=UINT32_MAX+1, size=nseeds), dtype=np.uint32)
+
+    # set the seeds
     cu_set_seed(cuda.In(seeds),np.int32(nseeds), block=(1,1,1))
     
+    return seeds
 
+
+# Inefficient way...
 # init the twister with the dat
 
 # # to do the seed at same time

@@ -115,7 +115,7 @@ __device__ unsigned int MersenneTwisterGenerate(MersenneTwisterState &state, uns
   return x;
 }
 
-__device__ float mtrand(MersenneTwisterState &state, unsigned int threadID) 
+__device__ float mt_rand(MersenneTwisterState &state, unsigned int threadID) 
 {
   return (float)MersenneTwisterGenerate(state, threadID) / 4294967295.0f;
 }
@@ -134,7 +134,7 @@ __device__ void BoxMuller(float& u1, float& u2){
     u2 = r * __sinf(phi);
 }
 
-__device__ float mtrandn(MersenneTwisterState &state, unsigned int threadID) 
+__device__ float mt_randn(MersenneTwisterState &state, unsigned int threadID) 
 {
   if (state.has_randn_val == 1)
   {
@@ -146,8 +146,8 @@ __device__ float mtrandn(MersenneTwisterState &state, unsigned int threadID)
   {
     // generate two and return one
     float u1, u2;
-    u1 = mtrand(state, threadID);
-    u2 = mtrand(state, threadID);
+    u1 = mt_rand(state, threadID);
+    u2 = mt_rand(state, threadID);
     BoxMuller(u1, u2);
 
     // keep one for the state

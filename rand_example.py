@@ -4,12 +4,12 @@ from pycuda.compiler import SourceModule
 
 import numpy as np
 
-import mtrand
+import cuda_mt_rand
 
 mod = SourceModule(
     """
-    #include "mtrand.cu.h"
-__global__ void cu_rand(float *x, int N)
+    #include "cuda_mt_rand.cu.h"
+__global__ void cu_rand_test(float *x, int N)
 {
   unsigned int idx = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
   if (idx < N)
@@ -17,16 +17,21 @@ __global__ void cu_rand(float *x, int N)
     // initialize the MT
     MersenneTwisterState mtState;
     MersenneTwisterInitialise(mtState, idx);
-    x[idx] = mtrandn(mtState, idx);
+
+    //
+    x[idx] = mt_rand(mtState, idx);
   }
 }
 
     """,
-    include_dirs=[mtrand.get_include_dir()])
+    include_dirs=[cuda_mt_rand.get_include_dir()])
 
-cu_rand = mod.get_function("cu_rand")
+# seed the random number generator
+cuda_mt_rand.seed(cuda,mod)
 
-asize = 100
+cu_rand = mod.get_function("cu_rand_test")
+
+asize = 10000
 bsize = 16
 a = np.zeros((asize,), dtype=np.float32)
 ac = cuda.mem_alloc(a.nbytes)
