@@ -14,7 +14,7 @@ mod = SourceModule(
 __global__ void cu_mat_test(unsigned int m, unsigned int n, unsigned int k,
                             float *A, float *B, float *C)
 {
-  mmult(m, n, k, 
+  mmult('f','f',m, n, k, 
 	1.0, A, B,
 	0.0, C);
 }
@@ -32,18 +32,20 @@ __global__ void cu_mat_test2(float *C)
   const unsigned int k = 5;
   const unsigned int n = 10;
 
-  float A[m*k];
-  float B[k*n];
+  float A[k][m];
+  float B[k][n];
 
   // set some values for A
-  for (int i=0; i<m; i++)
+  for (int i=0; i<k; i++)
   {
-    for (int j=0; j<k; j++)
+    for (int j=0; j<m; j++)
     {
-      if (i==0)
-        A[i*k+j] = mt_rand(mtState, idx);
+      if (j==0)
+        //A[i*k+j] = mt_rand(mtState, idx);
+        A[i][j] = mt_rand(mtState, idx);
       else
-        A[i*k+j] = 0.0;
+        //A[i*k+j] = 0.0;
+        A[i][j] = 0.0;
     }
   }
 
@@ -53,14 +55,16 @@ __global__ void cu_mat_test2(float *C)
     for (int j=0; j<n; j++)
     {
       if (j==4)
-        B[i*n+j] = mt_rand(mtState, idx);
+        //B[i*n+j] = mt_rand(mtState, idx);
+        B[i][j] = mt_rand(mtState, idx);
       else
-        B[i*n+j] = 0.0;
+        //B[i*n+j] = 0.0;
+        B[i][j] = 0.0;
     }
   }
 
-  mmult(m, n, k, 
-	1.0, A, B,
+  mmult('t','f',m, n, k, 
+	1.0, (float *)A, (float *)B,
 	0.0, C);
 }
 
