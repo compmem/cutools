@@ -11,16 +11,9 @@ mod = SourceModule(
     #include "mt_rand.cu.h"
     #include "matrix.cu.h"
 
-__global__ void cu_mat_test(unsigned int m, unsigned int k, unsigned int n,
+__global__ void cu_mat_test(unsigned int m, unsigned int n, unsigned int k,
                             float *A, float *B, float *C)
 {
-  // get the thread id
-  unsigned int idx = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
-
-  // initialize the MT
-  MersenneTwisterState mtState;
-  MersenneTwisterInitialise(mtState, idx);
-
   mmult(m, n, k, 
 	1.0, A, B,
 	0.0, C);
@@ -43,26 +36,26 @@ __global__ void cu_mat_test2(float *C)
   float B[k*n];
 
   // set some values for A
-  for (int i=0; i<k; i++)
+  for (int i=0; i<m; i++)
   {
-    for (int j=0; j<m; j++)
+    for (int j=0; j<k; j++)
     {
-      if (j==0)
-        A[j*k+i] = mt_rand(mtState, idx);
+      if (i==0)
+        A[i*k+j] = mt_rand(mtState, idx);
       else
-        A[j*k+i] = 0.0;
+        A[i*k+j] = 0.0;
     }
   }
 
   // set some values for B
-  for (int i=0; i<n; i++)
+  for (int i=0; i<k; i++)
   {
-    for (int j=0; j<k; j++)
+    for (int j=0; j<n; j++)
     {
-      if (i==4)
-        B[j*k+i] = mt_rand(mtState, idx);
+      if (j==4)
+        B[i*n+j] = mt_rand(mtState, idx);
       else
-        B[j*k+i] = 0.0;
+        B[i*n+j] = 0.0;
     }
   }
 
@@ -92,14 +85,14 @@ A[0,:] = np.random.rand(k)
 B[:,4] = np.random.rand(k)
 
 C = np.empty((2,10),dtype=np.float32)
-Cr = C.ravel()
 #cC = cuda.mem_alloc(C.nbytes)
-cu_mmult(m, k, n, cuda.In(A.ravel()), cuda.In(B.ravel()), cuda.Out(Cr),block=(1,1,1))
-#cu_mmult2(cuda.Out(Cr),block=(1,1,1))
+#cu_mmult(m, n, k, cuda.In(A), cuda.In(B), cuda.Out(C),block=(1,1,1))
+cu_mmult2(cuda.Out(C),block=(1,1,1))
 
 
 #__global__ void cu_mat_test(unsigned int m, unsigned int k, unsigned int n,
 #                            float *A, float *B, float *C)
 
-print Cr.reshape((2,10))
+print C
+#print Cr.reshape((2,10))
 #print np.dot(A,B)
