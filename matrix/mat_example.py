@@ -32,8 +32,10 @@ __global__ void cu_mat_test2(float *C)
   const unsigned int k = 5;
   const unsigned int n = 10;
 
-  float *A = zeros(m,k);
-  float *B = zeros(k,n);
+  float *A;
+  zeros(A,m,k);
+  float *B;
+  zeros(B,k,n);
 
   // set some values for A
   int i=0;

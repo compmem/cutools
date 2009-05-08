@@ -87,15 +87,12 @@ __device__ void mmult(char transa, char transb,
 }
 
 
-__device__ float *zeros(const unsigned int nrows, const unsigned int ncols)
+__device__ void zeros(float *mat, const unsigned int nrows, const unsigned int ncols)
 {
-  float mat[nrows*ncols];
   for (unsigned int i=0; i<nrows*ncols; i++)
   {
     mat[i] = 0.0;
   }
-
-  return mat
 }
 
 #endif
