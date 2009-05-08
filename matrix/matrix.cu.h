@@ -7,9 +7,11 @@
 #ifndef CUDA_MATRIX_CU_H
 #define CUDA_MATRIX_CU_H
 
+
+// some handy defines
 #define cidx(nrows, r, ncols, c) (c*nrows+r)
 #define ridx(nrows, r, ncols, c) (r*ncols+c)
-
+#define idx(r,c,ncols) (r*ncols+c)
 
 __device__ void mmult(char transa, char transb, 
 		      unsigned int m, unsigned int n, unsigned int k, 
@@ -84,5 +86,16 @@ __device__ void mmult(char transa, char transb,
   }
 }
 
+
+__device__ float *zeros(const unsigned int nrows, const unsigned int ncols)
+{
+  float mat[nrows*ncols];
+  for (unsigned int i=0; i<nrows*ncols; i++)
+  {
+    mat[i] = 0.0;
+  }
+
+  return mat
+}
 
 #endif

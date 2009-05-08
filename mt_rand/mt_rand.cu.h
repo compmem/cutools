@@ -1,4 +1,7 @@
 // This file is derived from the NVIDIA CUDA SDK example 'MersenneTwister'.
+// We make use of the expanded dat file from:
+// http://www.jcornwall.me.uk/2009/04/mersenne-twisters-in-cuda/
+
 
 /*
  * Copyright 1993-2007 NVIDIA Corporation.  All rights reserved.

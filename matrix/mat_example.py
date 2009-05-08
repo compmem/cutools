@@ -32,39 +32,21 @@ __global__ void cu_mat_test2(float *C)
   const unsigned int k = 5;
   const unsigned int n = 10;
 
-  float A[k][m];
-  float B[k][n];
+  float *A = zeros(m,k);
+  float *B = zeros(k,n);
 
   // set some values for A
-  for (int i=0; i<k; i++)
-  {
-    for (int j=0; j<m; j++)
-    {
-      if (j==0)
-        //A[i*k+j] = mt_rand(mtState, idx);
-        A[i][j] = mt_rand(mtState, idx);
-      else
-        //A[i*k+j] = 0.0;
-        A[i][j] = 0.0;
-    }
-  }
+  int i=0;
+  int j=0;
+  for (j=0; j<k; j++)
+    A[idx(i,j,k)] = mt_rand(mtState, idx);
 
-  // set some values for B
-  for (int i=0; i<k; i++)
-  {
-    for (int j=0; j<n; j++)
-    {
-      if (j==4)
-        //B[i*n+j] = mt_rand(mtState, idx);
-        B[i][j] = mt_rand(mtState, idx);
-      else
-        //B[i*n+j] = 0.0;
-        B[i][j] = 0.0;
-    }
-  }
+  j = 4;
+  for (i=0; i<k; i++)
+    B[idx(i,j,n)] = mt_rand(mtState, idx);
 
   mmult('t','f',m, n, k, 
-	1.0, (float *)A, (float *)B,
+	1.0, A, B,
 	0.0, C);
 }
 
