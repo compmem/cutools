@@ -162,5 +162,23 @@ __device__ float mt_randn(MersenneTwisterState &state, unsigned int threadID)
   }
 }
 
+__device__ void rands(MersenneTwisterState &state, unsigned int threadID,
+		      float *mat, const unsigned int nrows, const unsigned int ncols)
+{
+  for (unsigned int i=0; i<nrows*ncols; i++)
+  {
+    mat[i] = mt_rand(state, threadID);
+  }
+}
+
+__device__ void randns(MersenneTwisterState &state, unsigned int threadID,
+		       float *mat, const unsigned int nrows, const unsigned int ncols)
+{
+  for (unsigned int i=0; i<nrows*ncols; i++)
+  {
+    mat[i] = mt_randn(state, threadID);
+  }
+}
+
 
 #endif

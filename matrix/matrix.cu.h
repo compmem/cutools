@@ -7,7 +7,6 @@
 #ifndef MATRIX_CU_H
 #define MATRIX_CU_H
 
-
 // some handy defines
 #define cidx(nrows, r, ncols, c) (c*nrows+r)
 #define ridx(nrows, r, ncols, c) (r*ncols+c)

@@ -48,10 +48,11 @@ __global__ void cu_mat_test2(float *C)
   zeros(dat.B,k,n);
 
   // set some values for A
-  int i=0;
-  int j=0;
-  for (j=0; j<k; j++)
-    dat.A[idx(i,j,k)] = mt_rand(mtState, idx);
+  rands(mtState,idx,A,m,k);
+//  int i=0;
+//  int j=0;
+//  for (j=0; j<k; j++)
+//    dat.A[idx(i,j,k)] = mt_rand(mtState, idx);
 
   j = 4;
   for (i=0; i<k; i++)
