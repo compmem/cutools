@@ -19,6 +19,12 @@ __global__ void cu_mat_test(unsigned int m, unsigned int n, unsigned int k,
 	0.0, C);
 }
 
+struct two_mat
+{
+  float *A;
+  float *B;
+};
+
 __global__ void cu_mat_test2(float *C)
 {
   // get the thread id
@@ -32,23 +38,27 @@ __global__ void cu_mat_test2(float *C)
   const unsigned int k = 5;
   const unsigned int n = 10;
 
-  float *A;
-  zeros(A,m,k);
-  float *B;
-  zeros(B,k,n);
+  // test the use of struct to hold data
+  two_mat dat;
+  float A[m*k];
+  dat.A = A;
+  zeros(dat.A,m,k);
+  float B[k*n];
+  dat.B = B;
+  zeros(dat.B,k,n);
 
   // set some values for A
   int i=0;
   int j=0;
   for (j=0; j<k; j++)
-    A[idx(i,j,k)] = mt_rand(mtState, idx);
+    dat.A[idx(i,j,k)] = mt_rand(mtState, idx);
 
   j = 4;
   for (i=0; i<k; i++)
-    B[idx(i,j,n)] = mt_rand(mtState, idx);
+    dat.B[idx(i,j,n)] = mt_rand(mtState, idx);
 
   mmult('t','f',m, n, k, 
-	1.0, A, B,
+	1.0, dat.A, dat.B,
 	0.0, C);
 }
 

@@ -4,8 +4,8 @@
    cuda-enabled device.
  */
 
-#ifndef CUDA_MATRIX_CU_H
-#define CUDA_MATRIX_CU_H
+#ifndef MATRIX_CU_H
+#define MATRIX_CU_H
 
 
 // some handy defines
