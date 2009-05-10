@@ -3,6 +3,7 @@ import pycuda.autoinit
 from pycuda.compiler import SourceModule
 
 import numpy as np
+import struct
 
 from cuda_utils import mt_rand, matrix
 
@@ -11,12 +12,19 @@ mod = SourceModule(
     #include "mt_rand.cu.h"
     #include "matrix.cu.h"
 
+struct results
+{
+  float *C;
+  unsigned int num;
+};
+  
 __global__ void cu_mat_test(unsigned int m, unsigned int n, unsigned int k,
-                            float *A, float *B, float *C)
+                            float *A, float *B, results &res)
 {
   mmult('f','f',m, n, k, 
 	1.0, A, B,
-	0.0, C);
+	0.0, res.C);
+  res.num = 42;
 }
 
 struct two_mat
@@ -83,15 +91,39 @@ B = np.zeros((k,n),dtype=np.float32)
 A[0,:] = np.random.rand(k)
 B[:,4] = np.random.rand(k)
 
-C = np.empty((2,10),dtype=np.float32)
+class Results(object):
+    C = np.empty((2,10),dtype=np.float32)
+    num = np.uint32(0)
+    def send_to_gpu(self):
+        if self._cptr is None:
+            self._cptr = cuda.mem_alloc(self.nbytes)
+        #cuda.memcpy_htod(self._cptr, self.pack())
+    def get_from_gpu(self):
+        if not self._cptr is None:
+            tempstr = ' '*self.nbytes
+            cuda.memcpy_dtoh(tempstr,self._cptr)
+            self.C = np.fromstring(tempstr[:self.C.nbytes],
+                                   dtype=self.C.dtype).resize(self.C.shape)
+            self.num = np.fromstring(tempstr[self.num.nbytes:],
+                                     dtype=self.num.dtype)
+    def pack(self)
+        return self.C.tostring() + self.num.tostring()
+    def nbytes(self):
+        return self.C.nbytes + self.num.nbytes
+
+res = Results()
+res.send_to_gpu()
+#C = np.empty((2,10),dtype=np.float32)
 #cC = cuda.mem_alloc(C.nbytes)
 #cu_mmult(m, n, k, cuda.In(A), cuda.In(B), cuda.Out(C),block=(1,1,1))
-cu_mmult2(cuda.Out(C),block=(1,1,1))
-
+cu_mmult(m, n, k, cuda.In(A), cuda.In(B), res._cptr, block=(1,1,1))
+#cu_mmult2(cuda.Out(C),block=(1,1,1))
+res.get_from_gpu()
 
 #__global__ void cu_mat_test(unsigned int m, unsigned int k, unsigned int n,
 #                            float *A, float *B, float *C)
 
-print C
+print res.C, res.num
+#print C
 #print Cr.reshape((2,10))
 #print np.dot(A,B)
