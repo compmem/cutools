@@ -12,6 +12,61 @@
 #define ridx(nrows, r, ncols, c) (r*ncols+c)
 #define idx(r,c,ncols) (r*ncols+c)
 
+
+__device__ void madd(char transa, char transb, 
+		     unsigned int m, unsigned int n,
+		     float alpha, const float *A,
+		     float beta, const float *B, float *C)
+{
+  unsigned int i;
+  unsigned int j;
+
+  if (transa != 't')
+  {
+    // not transposing A
+    if (transb != 't')
+    {
+      // not transposing B
+      for (i = 0; i < m; ++i) {
+	for (j = 0; j < n; ++j) {
+	  C[ridx(m,i,n,j)] = alpha * A[ridx(m,i,n,j)] + beta * B[ridx(m,i,n,j)];
+	}
+      }
+    }
+    else
+    {
+      // transposing B
+      for (i = 0; i < m; ++i) {
+	for (j = 0; j < n; ++j) {
+	  C[ridx(m,i,n,j)] = alpha * A[ridx(m,i,n,j)] + beta * B[cidx(m,i,n,j)];
+	}
+      }
+    }
+  }
+  else
+  {
+    // transposing A
+    if (transb != 't')
+    {
+      // not transposing B
+      for (i = 0; i < m; ++i) {
+	for (j = 0; j < n; ++j) {
+	  C[ridx(m,i,n,j)] = alpha * A[cidx(m,i,n,j)] + beta * B[ridx(m,i,n,j)];
+	}
+      }
+    }
+    else
+    {
+      // transposing B
+      for (i = 0; i < m; ++i) {
+	for (j = 0; j < n; ++j) {
+	  C[ridx(m,i,n,j)] = alpha * A[cidx(m,i,n,j)] + beta * B[cidx(m,i,n,j)];
+	}
+      }
+    }
+  }
+}
+
 __device__ void mmult(char transa, char transb, 
 		      unsigned int m, unsigned int n, unsigned int k, 
 		      float alpha, const float *A, const float *B,
@@ -91,6 +146,15 @@ __device__ void zeros(float *mat, const unsigned int nrows, const unsigned int n
   for (unsigned int i=0; i<nrows*ncols; i++)
   {
     mat[i] = 0.0;
+  }
+}
+
+__device__ void mcopy(float *src, float *dest, 
+		      const unsigned int nrows, const unsigned int ncols)
+{
+  for (unsigned int i=0; i<nrows*ncols; i++)
+  {
+    dest[i] = src[i];
   }
 }
 

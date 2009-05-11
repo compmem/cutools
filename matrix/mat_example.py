@@ -17,9 +17,25 @@ struct results
   float *C;
   unsigned int num;
 };
-  
+
+struct source
+{
+  float *A;
+  float *B;
+  unsigned int m;
+  unsigned int n;
+  unsigned int k;
+};
+
+__global__ void cu_struct_test(source src, float *C)
+{
+  mmult('f','f', src.m, src.n, src.k, 
+	1.0, src.A, src.B,
+	0.0, C);
+}
+
 __global__ void cu_mat_test(unsigned int m, unsigned int n, unsigned int k,
-                            float *A, float *B, results &res)
+                            float *A, float *B, results res)
 {
   mmult('f','f',m, n, k, 
 	1.0, A, B,
@@ -92,21 +108,25 @@ A[0,:] = np.random.rand(k)
 B[:,4] = np.random.rand(k)
 
 class Results(object):
-    C = np.empty((2,10),dtype=np.float32)
-    num = np.uint32(0)
+
+    def __init__(self):
+        self._cptr = None
+        self.C = np.empty((2,10),dtype=np.float32)
+        self.num = np.uint32(0)
+        
     def send_to_gpu(self):
         if self._cptr is None:
-            self._cptr = cuda.mem_alloc(self.nbytes)
+            self._cptr = cuda.mem_alloc(self.nbytes())
         #cuda.memcpy_htod(self._cptr, self.pack())
     def get_from_gpu(self):
         if not self._cptr is None:
-            tempstr = ' '*self.nbytes
+            tempstr = np.array([' ']*self.nbytes())
             cuda.memcpy_dtoh(tempstr,self._cptr)
             self.C = np.fromstring(tempstr[:self.C.nbytes],
-                                   dtype=self.C.dtype).resize(self.C.shape)
-            self.num = np.fromstring(tempstr[self.num.nbytes:],
+                                   dtype=self.C.dtype).reshape(self.C.shape)
+            self.num = np.fromstring(tempstr[self.C.nbytes:],
                                      dtype=self.num.dtype)
-    def pack(self)
+    def pack(self):
         return self.C.tostring() + self.num.tostring()
     def nbytes(self):
         return self.C.nbytes + self.num.nbytes
@@ -123,7 +143,44 @@ res.get_from_gpu()
 #__global__ void cu_mat_test(unsigned int m, unsigned int k, unsigned int n,
 #                            float *A, float *B, float *C)
 
-print res.C, res.num
+print res.C
+print res.num
 #print C
 #print Cr.reshape((2,10))
 #print np.dot(A,B)
+
+
+pass
+
+
+
+class Source(object):
+
+    def __init__(self):
+        self.m = np.uint32(2)
+        self.k = np.uint32(5)
+        self.n = np.uint32(10)
+
+        self.A = np.zeros((self.m,self.k),dtype=np.float32)
+        self.B = np.zeros((self.k,self.n),dtype=np.float32)
+        self.A[0,:] = np.random.rand(self.k)
+        self.B[:,4] = np.random.rand(self.k)
+
+        self._cptr = None
+        
+    def send_to_gpu(self):
+        if self._cptr is None:
+            self._cptr = cuda.mem_alloc(self.nbytes())
+        #cuda.memcpy_htod(self._cptr, self.pack())
+    def get_from_gpu(self):
+        if not self._cptr is None:
+            tempstr = np.array([' ']*self.nbytes())
+            cuda.memcpy_dtoh(tempstr,self._cptr)
+            self.C = np.fromstring(tempstr[:self.C.nbytes],
+                                   dtype=self.C.dtype).resize(self.C.shape)
+            self.num = np.fromstring(tempstr[self.C.nbytes:],
+                                     dtype=self.num.dtype)
+    def pack(self):
+        return self.C.tostring() + self.num.tostring()
+    def nbytes(self):
+        return self.C.nbytes + self.num.nbytes
