@@ -53,26 +53,40 @@ class GPUStruct(object):
         for obj in self.__objs:
             if obj.find('*') == 0:
                 # it's a pointer, so send it to the device
-                setattr(self,obj[1:]+'_ptr',cuda.to_device(kwargs[obj[1:]]))
+                #setattr(self,obj[1:]+'_ptr',cuda.to_device(kwargs[obj[1:]]))
+                setattr(self,obj[1:]+'_ptr',
+                        cuda.mem_alloc(kwargs[obj[1:]].nbytes))
                 # also save the data
                 setattr(self,obj[1:],kwargs[obj[1:]])
             else:
                 # just set it
                 setattr(self,obj,kwargs[obj])
+
+        self.__ptr = None
+        self.__fromstr = None
+
+    def copy_to_gpu(self):
+
+        # loop over obj and send the data for the pointers
+        for obj in self.__objs:
+            if obj.find('*') == 0:
+                # it's a pointer, so send the data
+                cuda.memcpy_htod(getattr(self,obj[1:]+'_ptr'),
+                                 getattr(self,obj[1:]))
+
         # pack everything and send struct to device
         self.__packstr = self.pack()
         self.__ptr = cuda.to_device(self.__packstr)
 
-        # save the length
+        # create a fromstring to get data back
         self.__fromstr = np.array(' '*len(self.__packstr))
-
-        # set to have not unpacked yet
-        self.__unpacked = None
-
+        
     def get_ptr(self):
+        if self.__ptr is None:
+            raise RuntimeError("You never called copy_to_gpu.")
         return self.__ptr
 
-    def get_data(self):
+    def get_packed(self):
         return self.__packstr
 
     def pack(self):
@@ -93,13 +107,21 @@ class GPUStruct(object):
         return struct.pack(self.__fmt,*topack)
 
     def copy_from_gpu(self):
-        try:
-            # try and get the passed struct back
-            cuda.memcpy_dtoh(self.__packstr, self.__ptr)
-        except:
-            # just use the original packstr
-            pass
-        self.__unpacked = struct.unpack(self.__fmt, self.__packstr)
+        #         try:
+        #             # try and get the passed struct back
+        #             cuda.memcpy_dtoh(self.__fromstr, self.__ptr)
+        #             self.__unpacked = struct.unpack(self.__fmt, self.__fromstr)
+        #         except:
+        #             # just use the original packstr
+        #             self.__unpacked = struct.unpack(self.__fmt, self.__packstr)
+
+        # makre sure we've sent there
+        if self.__fromstr is None:
+            raise RuntimeError("You never called copy_to_gpu.")
+        
+        # try and get the passed struct back
+        cuda.memcpy_dtoh(self.__fromstr, self.__ptr)
+        self.__unpacked = struct.unpack(self.__fmt, self.__fromstr)
 
         # now fill the attributes from the unpacked data
         for ind,obj in enumerate(self.__objs):
@@ -109,7 +131,9 @@ class GPUStruct(object):
                                  getattr(self, obj[1:]+'_ptr'))
             else:
                 # get it from the unpacked values
-                setattr(self, obj, self.__unpacked[ind])
+                # trying to keep the dtype with a hack
+                setattr(self, obj,
+                        getattr(np,str(getattr(self,obj).dtype))(self.__unpacked[ind]))
                 
 #     def __getattr__(self, attr):
 
