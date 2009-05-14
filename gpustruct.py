@@ -39,6 +39,7 @@ class GPUStruct(object):
 
         And get data like this:
 
+        res.copy_from_gpu()
         res.A
         res.B
         res.n
@@ -47,18 +48,18 @@ class GPUStruct(object):
         # set the objs
         self.__objs = objs
         self.__objnames = [obj.replace('*','') for obj in self.__objs]
-        
+
         # loop over objs, setting attributes from kwargs
         for obj in self.__objs:
             if obj.find('*') == 0:
                 # it's a pointer, so send it to the device
-                setattr(self,'__'+obj[1:],cuda.to_device(kwargs[obj[1:]]))
+                setattr(self,obj[1:]+'_ptr',cuda.to_device(kwargs[obj[1:]]))
                 # also save the data
-                setattr(self,'__'+obj[1:]+'_data',kwargs[obj[1:]])
+                setattr(self,obj[1:],kwargs[obj[1:]])
             else:
                 # just set it
-                setattr(self,'__'+obj,kwargs[obj])
-        # pack everything and send to device
+                setattr(self,obj,kwargs[obj])
+        # pack everything and send struct to device
         self.__packstr = self.pack()
         self.__ptr = cuda.to_device(self.__packstr)
 
@@ -82,42 +83,52 @@ class GPUStruct(object):
             if obj.find('*') == 0:
                 # is pointer
                 self.__fmt += 'P'
-                topack.append(np.intp(int(getattr(self,'__'+obj[1:]))))
+                topack.append(np.intp(int(getattr(self,obj[1:]+'_ptr'))))
             else:
                 # is normal, so just get it
-                toadd = getattr(self,'__'+obj) 
+                toadd = getattr(self,obj) 
                 self.__fmt += toadd.dtype.char
                 topack.append(toadd)
         # pack it up
         return struct.pack(self.__fmt,*topack)
 
-    def retrieve(self):
+    def copy_from_gpu(self):
         try:
             # try and get the passed struct back
-            cuda.memcpy_dtoh(self.__fromstr, self.__ptr)
-            self.__unpacked = struct.unpack(self.__fmt, self.__fromstr)
+            cuda.memcpy_dtoh(self.__packstr, self.__ptr)
         except:
             # just use the original packstr
-            self.__unpacked = struct.unpack(self.__fmt, self.__packstr)
+            pass
+        self.__unpacked = struct.unpack(self.__fmt, self.__packstr)
 
-    def __getattr__(self, attr):
-
-        if attr in self.__objnames:
-            if self.__unpacked is None:
-                # must retrieve first
-                self.retrieve()
-            # get the index
-            ind = self.__objnames.index(attr)
-            if '*'+attr == self.__objs[ind]:
-                # is pointer, so retrieve from card
-                data = getattr(self, '__'+self.__objnames[ind]+'_data')
-                cuda.memcpy_dtoh(data,getattr(self,'__'+self.__objnames[ind]))
-                return data
-                #return cuda.from_device(getattr(self,'__'+self.__objnames[ind]),
-                #                        data.shape,
-                #                        data.dtype)
+        # now fill the attributes from the unpacked data
+        for ind,obj in enumerate(self.__objs):
+            if obj.find('*') == 0:
+                # is a pointer, so retrieve from card
+                cuda.memcpy_dtoh(getattr(self, obj[1:]),
+                                 getattr(self, obj[1:]+'_ptr'))
             else:
-                # just lookup in unpacked
-                return self.__unpacked[ind]
-        else:
-            raise AttributeError("Attribute not found %s." % (attr))
+                # get it from the unpacked values
+                setattr(self, obj, self.__unpacked[ind])
+                
+#     def __getattr__(self, attr):
+
+#         if attr in self.__objnames:
+#             if self.__unpacked is None:
+#                 # must retrieve first
+#                 self.retrieve()
+#             # get the index
+#             ind = self.__objnames.index(attr)
+#             if '*'+attr == self.__objs[ind]:
+#                 # is pointer, so retrieve from card
+#                 data = getattr(self, self.__objnames[ind]+'_data')
+#                 cuda.memcpy_dtoh(data,getattr(self,self.__objnames[ind]))
+#                 return data
+#                 #return cuda.from_device(getattr(self,self.__objnames[ind]),
+#                 #                        data.shape,
+#                 #                        data.dtype)
+#             else:
+#                 # just lookup in unpacked
+#                 return self.__unpacked[ind]
+#         else:
+#             raise AttributeError("Attribute not found %s." % (attr))
