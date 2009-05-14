@@ -76,7 +76,12 @@ class GPUStruct(object):
 
         # pack everything and send struct to device
         self.__packstr = self.pack()
-        self.__ptr = cuda.to_device(self.__packstr)
+        if self.__ptr is None:
+            # send it for the first time
+            self.__ptr = cuda.to_device(self.__packstr)
+        else:
+            # copy out to the existing pointer
+            cuda.memcpy_htod(self.__ptr, self.__packstr)
 
         # create a fromstring to get data back
         self.__fromstr = np.array(' '*len(self.__packstr))
