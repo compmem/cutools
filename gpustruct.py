@@ -27,9 +27,12 @@ class GPUStruct(object):
 
         your initialization could look like this:
 
-        res = GPUStruct(['n','k','*A','*B'],
-                    n = np.uint32(10),
-                    k = np.float32(0),
+        res = GPUStruct([(np.uint32,'n'),
+                         (np.float32,'k'),
+                         (np.float32,'*A'),
+                         (np.float32,'*B')],
+                    n = 10,
+                    k = 0,
                     A = np.zeros(10,dtype=np.float32),
                     B = np.ones(10,dtype=np.float32))
 
@@ -46,15 +49,16 @@ class GPUStruct(object):
 
         """
         # set the objs
+        #self.__formats,self.__objs = zip(*[(obj[0],obj[1]) for obj in objs])
         self.__objs = objs
-        self.__objnames = [obj.replace('*','') for obj in self.__objs]
+        self.__objnames = [obj.replace('*','') for fmt,obj in self.__objs]
 
         # set a dict for holding nbytes
         self.__nbytes = {}
         self.__ptrs = {}
         
         # loop over objs, setting attributes from kwargs
-        for obj in self.__objs:
+        for fmt,obj in self.__objs:
             if obj.find('*') == 0:
                 # set the obj name without the *
                 obj = obj[1:]
@@ -83,14 +87,14 @@ class GPUStruct(object):
     def copy_to_gpu(self):
 
         # loop over obj and send the data for the pointers
-        for obj in self.__objs:
+        for fmt,obj in self.__objs:
             if obj.find('*') == 0:
                 # set the obj name without the *
                 obj = obj[1:]
                 # verify the nbytes did not change, if so, free old
                 # ptr and allocate for new one.
                 # get the current bytes
-                cur_nbytes = getattr(self,obj).nbytes
+                cur_nbytes = fmt(getattr(self,obj)).nbytes
                 if self.__nbytes.has_key(obj) and \
                        self.__nbytes[obj] != cur_nbytes:
                     # free it
@@ -105,7 +109,7 @@ class GPUStruct(object):
 
                 # send the data to the memory space
                 cuda.memcpy_htod(self.__ptrs[obj],
-                                 getattr(self,obj))
+                                 fmt(getattr(self,obj)))
 
         # pack everything and send struct to device
         self.__packstr = self._pack()
@@ -131,7 +135,7 @@ class GPUStruct(object):
         packed = ''
         self.__fmt = ''
         topack = []
-        for obj in self.__objs:
+        for fmt,obj in self.__objs:
             if obj.find('*') == 0:
                 # set the obj name without the *
                 obj = obj[1:]
@@ -140,7 +144,7 @@ class GPUStruct(object):
                 topack.append(np.intp(int(self.__ptrs[obj])))
             else:
                 # is normal, so just get it
-                toadd = getattr(self,obj) 
+                toadd = fmt(getattr(self,obj))
                 self.__fmt += toadd.dtype.char
                 topack.append(toadd)
         # pack it up
@@ -164,18 +168,22 @@ class GPUStruct(object):
         self.__unpacked = struct.unpack(self.__fmt, self.__fromstr)
 
         # now fill the attributes from the unpacked data
-        for ind,obj in enumerate(self.__objs):
+        for ind,(fmt,obj) in enumerate(self.__objs):
             if obj.find('*') == 0:
                 # set the obj name without the *
                 obj = obj[1:]
                 # is a pointer, so retrieve from card
+                # first make sure dest is correct datatype
+                setattr(self,obj,fmt(getattr(self, obj)))
                 cuda.memcpy_dtoh(getattr(self, obj),
                                  self.__ptrs[obj])
             else:
                 # get it from the unpacked values
                 # trying to keep the dtype with a hack
+                #setattr(self, obj,
+                #        getattr(np,str(getattr(self,obj).dtype))(self.__unpacked[ind]))
                 setattr(self, obj,
-                        getattr(np,str(getattr(self,obj).dtype))(self.__unpacked[ind]))
+                        fmt(self.__unpacked[ind]))
                 
 #     def __getattr__(self, attr):
 
