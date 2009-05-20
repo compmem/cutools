@@ -84,8 +84,11 @@ class GPUStruct(object):
             self.__ptr.free()
             self.__ptr = None
             
-    def copy_to_gpu(self):
-
+    def copy_to_gpu(self, skip=None):
+        # get skip list
+        if skip is None:
+            skip = []
+        
         # loop over obj and send the data for the pointers
         for fmt,obj in self.__objs:
             if obj.find('*') == 0:
@@ -108,8 +111,9 @@ class GPUStruct(object):
                     self.__ptrs[obj] = cuda.mem_alloc(cur_nbytes)
 
                 # send the data to the memory space
-                cuda.memcpy_htod(self.__ptrs[obj],
-                                 fmt(getattr(self,obj)))
+                if not obj in skip:
+                    cuda.memcpy_htod(self.__ptrs[obj],
+                                     fmt(getattr(self,obj)))
 
         # pack everything and send struct to device
         self.__packstr = self._pack()
@@ -150,7 +154,7 @@ class GPUStruct(object):
         # pack it up
         return struct.pack(self.__fmt,*topack)
 
-    def copy_from_gpu(self):
+    def copy_from_gpu(self, skip=None):
         #         try:
         #             # try and get the passed struct back
         #             cuda.memcpy_dtoh(self.__fromstr, self.__ptr)
@@ -158,6 +162,10 @@ class GPUStruct(object):
         #         except:
         #             # just use the original packstr
         #             self.__unpacked = struct.unpack(self.__fmt, self.__packstr)
+
+        # get skip list
+        if skip is None:
+            skip = []
 
         # makre sure we've sent there
         if self.__fromstr is None:
@@ -173,10 +181,11 @@ class GPUStruct(object):
                 # set the obj name without the *
                 obj = obj[1:]
                 # is a pointer, so retrieve from card
-                # first make sure dest is correct datatype
-                setattr(self,obj,fmt(getattr(self, obj)))
-                cuda.memcpy_dtoh(getattr(self, obj),
-                                 self.__ptrs[obj])
+                if not obj in skip:
+                    # first make sure dest is correct datatype
+                    setattr(self,obj,fmt(getattr(self, obj)))
+                    cuda.memcpy_dtoh(getattr(self, obj),
+                                     self.__ptrs[obj])
             else:
                 # get it from the unpacked values
                 # trying to keep the dtype with a hack
