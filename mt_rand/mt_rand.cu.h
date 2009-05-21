@@ -72,9 +72,11 @@ struct MersenneTwisterState {
 
 __device__ static mt_struct_stripped MT[MT_RNG_COUNT];
 
-__global__ void MersineTwisterSetSeed(unsigned int *seeds, int N)
+//__global__ void MersineTwisterSetSeed(unsigned int *seeds, int N)
+__global__ void MersineTwisterSetSeed(unsigned int *seeds)
 {
-  for (int i=0; i<N; i++)
+  //for (int i=0; i<N; i++)
+  for (int i=0; i<MT_RNG_COUNT; i++)
   {
     MT[i].seed = seeds[i];
   }

@@ -35,7 +35,8 @@ def seed(cuda, mod, seeds=None):
         seeds = np.asarray(np.random.randint(0, high=UINT32_MAX+1, size=nseeds), dtype=np.uint32)
 
     # set the seeds
-    cu_set_seed(cuda.In(seeds),np.int32(nseeds), block=(1,1,1))
+    #cu_set_seed(cuda.In(seeds),np.int32(nseeds), block=(1,1,1))
+    cu_set_seed(cuda.In(seeds), block=(1,1,1))
     
     return seeds
 
