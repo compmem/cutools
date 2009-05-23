@@ -36,7 +36,14 @@ def seed(cuda, mod, seeds=None):
 
     # set the seeds
     #cu_set_seed(cuda.In(seeds),np.int32(nseeds), block=(1,1,1))
-    cu_set_seed(cuda.In(seeds), block=(1,1,1))
+    #cu_set_seed(cuda.In(seeds), block=(1,1,1))
+
+    # call it in parallel
+    bsize = 32
+    gsize = (nseeds/bsize)
+    if gsize*bsize < nseeds:
+        gsize += 1
+    cu_set_seed(cuda.In(seeds), block=(bsize,1,1), grid=(gsize,1))
     
     return seeds
 
