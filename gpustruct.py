@@ -83,7 +83,13 @@ class GPUStruct(object):
             # free the main pointer struct
             self.__ptr.free()
             self.__ptr = None
-            
+
+    def __str__(self):
+        ostring = ""
+        for oname in self.__objnames:
+            ostring+="%s: %s\n" % (oname, str(getattr(self,oname)))
+        return ostring
+    
     def copy_to_gpu(self, skip=None):
         # get skip list
         if skip is None:
