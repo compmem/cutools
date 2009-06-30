@@ -96,7 +96,7 @@ __device__ void MersenneTwisterInitialise(MersenneTwisterState &state, unsigned 
   state.iState = 0;
   state.mti1 = state.mt[0];
 	
-  // do not have randn to start
+  // does not have randn to start
   state.has_randn_val = 0;
 }
 
