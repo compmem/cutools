@@ -50,8 +50,9 @@ class GPUStruct(object):
         """
         # set the objs
         #self.__formats,self.__objs = zip(*[(obj[0],obj[1]) for obj in objs])
-        self.__objs = objs
-        self.__objnames = [obj.replace('*','') for fmt,obj in self.__objs]
+        # make them tuples to prevent modification
+        self.__objs = tuple(objs)
+        self.__objnames = tuple([obj.replace('*','') for fmt,obj in self.__objs])
 
         # set a dict for holding nbytes
         self.__nbytes = {}
