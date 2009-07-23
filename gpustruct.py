@@ -7,7 +7,7 @@ import struct
 import pycuda.driver as cuda
 
 class GPUStruct(object):
-    def __init__(self, objs, **kwargs):
+    def __init__(self, objs):
         """
         Initialize the link to the struct on the GPU device.  
 
@@ -27,14 +27,10 @@ class GPUStruct(object):
 
         your initialization could look like this:
 
-        res = GPUStruct([(np.uint32,'n'),
-                         (np.float32,'k'),
-                         (np.float32,'*A'),
-                         (np.float32,'*B')],
-                    n = 10,
-                    k = 0,
-                    A = np.zeros(10,dtype=np.float32),
-                    B = np.ones(10,dtype=np.float32))
+        res = GPUStruct([(np.uint32,'n', 10),
+                         (np.float32,'k', 0),
+                         (np.float32,'*A', np.zeros(10,dtype=np.float32)),
+                         (np.float32,'*B', np.ones(10,dtype=np.float32))])
 
         You can then use it like this:
 
@@ -51,8 +47,20 @@ class GPUStruct(object):
         # set the objs
         #self.__formats,self.__objs = zip(*[(obj[0],obj[1]) for obj in objs])
         # make them tuples to prevent modification
-        self.__objs = tuple(objs)
-        self.__objnames = tuple([obj.replace('*','') for fmt,obj in self.__objs])
+        self.__objs = []
+        self.__objnames = []
+        inits = {}
+        for obj in objs:
+            oname = obj[1].replace('*','')
+            self.__objs.append((obj[0],obj[1]))
+            self.__objnames.append(oname)
+            inits[oname] = obj[2]
+
+        # make them both tuples
+        self.__objs = tuple(self.__objs)
+        self.__objnames = tuple(self.__objnames)
+        #self.__objs = tuple(objs)
+        #self.__objnames = tuple([obj.replace('*','') for fmt,obj in self.__objs])
 
         # set a dict for holding nbytes
         self.__nbytes = {}
@@ -67,7 +75,8 @@ class GPUStruct(object):
                 self.__ptrs[obj] = None
 
             # also save the data
-            setattr(self,obj,kwargs[obj])
+            #setattr(self,obj,kwargs[obj])
+            setattr(self,obj,inits[obj])
             
         self.__ptr = None
         self.__fromstr = None
