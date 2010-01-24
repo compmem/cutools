@@ -5,7 +5,7 @@ from pycuda.compiler import SourceModule
 import numpy as np
 import struct
 
-from cuda_utils import mt_rand, matrix
+from cutools import mt_rand, matrix
 
 mod = SourceModule(
     """

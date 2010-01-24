@@ -149,6 +149,14 @@ __device__ void zeros(float *mat, const unsigned int nrows, const unsigned int n
   }
 }
 
+__device__ void mset(float *mat, float val, const unsigned int nrows, const unsigned int ncols)
+{
+  for (unsigned int i=0; i<nrows*ncols; i++)
+  {
+    mat[i] = val;
+  }
+}
+
 __device__ void mcopy(float *src, float *dest, 
 		      const unsigned int nrows, const unsigned int ncols)
 {

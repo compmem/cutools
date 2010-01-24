@@ -4,11 +4,11 @@ from pycuda.compiler import SourceModule
 
 import numpy as np
 
-from cuda_utils import mt_rand
+from cutools import mt_rand
 
 mod = SourceModule(
     """
-    #include "mt_rand.cu.h"
+#include "mt_rand.cu.h"
 __global__ void cu_rand_test(float *x, int N)
 {
   unsigned int idx = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
