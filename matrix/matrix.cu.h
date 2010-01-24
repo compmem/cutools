@@ -141,20 +141,27 @@ __device__ void mmult(char transa, char transb,
 }
 
 
-__device__ void zeros(float *mat, const unsigned int nrows, const unsigned int ncols)
-{
-  for (unsigned int i=0; i<nrows*ncols; i++)
-  {
-    mat[i] = 0.0;
-  }
-}
-
 __device__ void mset(float *mat, float val, const unsigned int nrows, const unsigned int ncols)
 {
   for (unsigned int i=0; i<nrows*ncols; i++)
   {
     mat[i] = val;
   }
+}
+
+__device__ void zeros(float *mat, const unsigned int nrows, const unsigned int ncols)
+{
+  mset(mat, 0.0, nrows, ncols);
+}
+
+__device__ void ones(float *mat, const unsigned int nrows, const unsigned int ncols)
+{
+  mset(mat, 1.0, nrows, ncols);
+}
+
+__device__ void nans(float *mat, const unsigned int nrows, const unsigned int ncols)
+{
+  mset(mat, nanf(""), nrows, ncols);
 }
 
 __device__ void mcopy(float *src, float *dest, 
