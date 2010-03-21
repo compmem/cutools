@@ -113,7 +113,8 @@ class GPUStruct(object):
                 # verify the nbytes did not change, if so, free old
                 # ptr and allocate for new one.
                 # get the current bytes
-                cur_nbytes = fmt(getattr(self,obj)).nbytes
+                dat = np.ascontiguousarray(fmt(getattr(self,obj)))
+                cur_nbytes = dat.nbytes
                 if self.__nbytes.has_key(obj) and \
                        self.__nbytes[obj] != cur_nbytes:
                     # free it
@@ -128,8 +129,7 @@ class GPUStruct(object):
 
                 # send the data to the memory space
                 if not obj in skip:
-                    cuda.memcpy_htod(self.__ptrs[obj],
-                                     fmt(getattr(self,obj)))
+                    cuda.memcpy_htod(self.__ptrs[obj],dat)
 
         # pack everything and send struct to device
         self.__packstr = self._pack()
